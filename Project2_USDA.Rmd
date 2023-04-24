@@ -1,0 +1,116 @@
+---
+title: "USDA Food Data Analysis by Aiman Sahay dated 24/04/2023"
+output: html_notebook
+---
+
+Few observations from the USDA dataset:<br><br>
+1. Foods with more protein content are low in fat.<br>
+2. Foods containing high protein have an higher average iron content.<br>
+3. Foods with higher carbs have higher vitamin C levels.<br>
+4. Surprisingly higher caloric foods do not seem to contain high sugar content.<br>
+5. Fatty foods also seem to contain lesser sugar content.<br>
+6. Fatty foods are in fact higher in calories.<br>
+<br>
+
+
+```{r}
+# Loading the source file
+USDA <- read.csv("USDA.csv", stringsAsFactors = TRUE)
+
+# Understanding the data
+str(USDA)
+
+summary(USDA)
+
+# Data Analysis
+# The max value of Sodium seems suspicious as its too high. Lets analyse that.
+
+which.max(USDA$Sodium)
+
+names(USDA) # to get column names
+
+USDA$Description[265]
+# Table Salt - It makes sense that 100gms Table salt contains 38758 mg of sodium but no one would have this quantity of salt in one sitting.
+# Hence, lets find out which foods contain say 10000 mg of sodium.
+
+# Creating a dataframe as a subset of original one.
+HighSodium <- subset(USDA, Sodium > 10000)
+nrow(HighSodium)
+HighSodium$Description
+
+# The above list does not contain "CAVIAR" which is known to contain high sodium content. Lets look up "CAVIAR" in the dataset.
+match("CAVIAR", USDA$Description)
+
+# CAVIAR is 4154th observation. Find sodium content now.
+USDA$Sodium[4154]
+
+# OR this could be written in one step:
+USDA$Sodium[match("CAVIAR", USDA$Description)]
+
+# To understand the significance of this value, compare it to the mean and standard deviation of sodium.
+summary(USDA$Sodium)
+sd(USDA$Sodium, na.rm = TRUE)
+
+# Observation: Mean + 1 SD ~ 1400mg of sodium which is < 1500 mg of sodium in CAVIAR. Hence CAVIAR is pretty high in sodium content given that most of the observations have a sodium content of 1400mg. So this value seems okay.
+
+
+# Exploratory Data Analysis
+plot(USDA$Protein, USDA$TotalFat, xlab = "Protein", ylab = "Fat", main = "Protein vs. Fat", col = "red")
+
+hist(USDA$VitaminC, xlab = "Vitamin C (mg)", main = "Histogram of Vitamin C levels", xlim = c(0, 100), breaks=2000)
+
+boxplot(USDA$Sugar, main = "Boxplot of Sugar Levels", ylab = "Sugar (g)")
+
+# Adding new variables to our dataset.
+
+# Checking foods that have > OR < average sodium levels.
+
+USDA$HighSodium <- as.numeric(USDA$Sodium > mean(USDA$Sodium, na.rm = TRUE))
+USDA$HighProtein <- as.numeric(USDA$Protein > mean(USDA$Protein, na.rm = TRUE))
+USDA$HighFat <- as.numeric(USDA$TotalFat > mean(USDA$TotalFat, na.rm = TRUE))
+USDA$HighCarbs <- as.numeric(USDA$Carbohydrate > mean(USDA$Carbohydrate, na.rm = TRUE))
+
+str(USDA)
+
+# Count foods that have sodium level = 1
+table(USDA$HighSodium)
+table(USDA$HighSodium, USDA$HighFat)
+
+# Sorting foods containing iron based on their protein content.
+tapply(USDA$Iron, USDA$HighProtein, mean, na.rm = TRUE)
+
+# Maximum value of Vitamin C in foods with High and Low carbs
+tapply(USDA$VitaminC, USDA$HighCarbs, max, na.rm = TRUE)
+
+# Based on the above values, is it true that foods with low carb content have lower Vitamin C levels, and foods with higher carb content have higher Vitamin C levels?
+# Use the summary function for Vitamin C
+
+tapply(USDA$VitaminC, USDA$HighCarbs, summary, na.rm = TRUE)
+# As per this result, since mean of Vitamin C levels is lower for foods with lower carbs content than higher carbs content, the above result seems fine.
+
+
+# Lets see if foods with higher sugar content have in fact higher calories
+plot(USDA$Sugar, USDA$Calories, xlab = "Sugar (g)", ylab = "Calories (kilo Calories)", main = "Sugar vs. Calories in 100 gms of food", col = blues9)
+
+USDA$HighSugar <- as.numeric(USDA$Sugar > mean(USDA$Sugar, na.rm = TRUE))
+USDA$HighCalories <- as.numeric(USDA$Calories > mean(USDA$Calories, na.rm = TRUE))
+str(USDA)
+
+table(USDA$HighCalories, USDA$HighSugar)
+
+# Observation: High caloric foods do not seem to contain high sugar content.
+
+# Now lets see the relationship between sugar and fat
+plot(USDA$Sugar, USDA$TotalFat, xlab = "Sugar(g)", ylab = "Total Fat (g)", main = "Sugar vs. Fat in 100 gms of Food", col = "palegreen")
+table(USDA$HighFat, USDA$HighSugar)
+
+# Observation: Low sugar content in high fat foods.
+
+# Testing the hypothesis that fatty foods contain high calories
+plot(USDA$TotalFat, USDA$Calories, xlab = "Total Fat (g)", ylab = "Calories (kilo Calories)", main = "Fat vs. Calories", col = "red")
+table(USDA$HighFat, USDA$HighCalories)
+tapply(USDA$Calories, USDA$HighFat, mean, na.rm = TRUE)
+
+# Observation: Fatty foods are in fact higher in calories.
+```
+
